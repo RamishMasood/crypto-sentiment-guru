@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, LineChart } from "lucide-react";
+import { TrendingUp, TrendingDown, LineChart, BrainCog } from "lucide-react";
 
 export const CryptoStats = () => {
   return (
@@ -30,7 +30,7 @@ export const CryptoStats = () => {
                   75% Confidence
                 </p>
               </div>
-              <Brain className="h-8 w-8 text-muted-foreground" />
+              <BrainCog className="h-8 w-8 text-muted-foreground" />
             </div>
           </Card>
 

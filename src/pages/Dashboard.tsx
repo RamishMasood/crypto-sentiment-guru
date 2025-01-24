@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { CryptoStats } from "@/components/CryptoStats";
@@ -49,12 +49,13 @@ export default function Dashboard() {
 
   const addToWatchlist = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCrypto.trim()) return;
+    if (!newCrypto.trim() || !user) return;
 
     try {
       const { error } = await supabase.from("watchlists").insert([
         {
           cryptocurrency: newCrypto.toUpperCase(),
+          user_id: user.id
         },
       ]);
 

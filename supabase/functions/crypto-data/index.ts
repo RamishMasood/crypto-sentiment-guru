@@ -35,22 +35,27 @@ serve(async (req) => {
       priceData.USD * 1.1 : // 10% increase prediction
       priceData.USD * 0.9;  // 10% decrease prediction
 
+    const responseData = {
+      currentPrice: priceData.USD,
+      dailyHistory: dailyHistory.Data.Data,
+      hourlyHistory: hourlyHistory.Data.Data,
+      prediction: {
+        price: prediction,
+        trend: trend,
+        confidence: 0.7 // Simplified confidence score
+      }
+    };
+
+    console.log('Crypto data response:', JSON.stringify(responseData));
+
     return new Response(
-      JSON.stringify({
-        currentPrice: priceData.USD,
-        dailyHistory: dailyHistory.Data.Data,
-        hourlyHistory: hourlyHistory.Data.Data,
-        prediction: {
-          price: prediction,
-          trend: trend,
-          confidence: 0.7 // Simplified confidence score
-        }
-      }),
+      JSON.stringify(responseData),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     )
   } catch (error) {
+    console.error('Error in crypto-data function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

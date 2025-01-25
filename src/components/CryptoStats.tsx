@@ -18,10 +18,19 @@ import { useToast } from "@/hooks/use-toast";
 
 interface CryptoData {
   currentPrice: number;
-  history: Array<{
+  dailyHistory: Array<{
     time: number;
     close: number;
   }>;
+  hourlyHistory: Array<{
+    time: number;
+    close: number;
+  }>;
+  prediction: {
+    price: number;
+    trend: 'up' | 'down';
+    confidence: number;
+  };
 }
 
 export const CryptoStats = () => {
@@ -38,6 +47,7 @@ export const CryptoStats = () => {
       if (error) throw error;
       setBtcData(data);
     } catch (error) {
+      console.error('Error fetching crypto data:', error);
       toast({
         title: "Error",
         description: "Failed to fetch crypto data",
@@ -70,14 +80,16 @@ export const CryptoStats = () => {
     );
   }
 
-  const priceChange = btcData.history.length > 1
-    ? ((btcData.currentPrice - btcData.history[0].close) / btcData.history[0].close) * 100
+  // Safely calculate price change using daily history
+  const priceChange = btcData.dailyHistory && btcData.dailyHistory.length > 0
+    ? ((btcData.currentPrice - btcData.dailyHistory[0].close) / btcData.dailyHistory[0].close) * 100
     : 0;
 
-  const chartData = btcData.history.map((item) => ({
+  // Prepare chart data from hourly history for more granular view
+  const chartData = btcData.hourlyHistory ? btcData.hourlyHistory.map((item) => ({
     date: new Date(item.time * 1000).toLocaleDateString(),
     price: item.close,
-  }));
+  })) : [];
 
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 relative">
@@ -102,32 +114,34 @@ export const CryptoStats = () => {
                 </p>
               </div>
               <div className="h-16 w-24">
-                <ChartContainer
-                  config={{
-                    price: {
-                      theme: {
-                        light: "hsl(var(--primary))",
-                        dark: "hsl(var(--primary))",
+                {chartData.length > 0 && (
+                  <ChartContainer
+                    config={{
+                      price: {
+                        theme: {
+                          light: "hsl(var(--primary))",
+                          dark: "hsl(var(--primary))",
+                        },
                       },
-                    },
-                  }}
-                >
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area
-                      type="monotone"
-                      dataKey="price"
-                      stroke="hsl(var(--primary))"
-                      fill="url(#gradient)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ChartContainer>
+                    }}
+                  >
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <Area
+                        type="monotone"
+                        dataKey="price"
+                        stroke="hsl(var(--primary))"
+                        fill="url(#gradient)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ChartContainer>
+                )}
               </div>
             </div>
           </Card>
@@ -137,10 +151,10 @@ export const CryptoStats = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Market Sentiment</p>
                 <h3 className="text-2xl font-bold mt-1">
-                  {priceChange >= 0 ? "Bullish" : "Bearish"}
+                  {btcData.prediction.trend === 'up' ? "Bullish" : "Bearish"}
                 </h3>
                 <p className="text-sm text-muted-foreground flex items-center mt-1">
-                  Based on 30-day trend
+                  {(btcData.prediction.confidence * 100).toFixed(0)}% confidence
                 </p>
               </div>
               <BrainCog className="h-8 w-8 text-muted-foreground" />
@@ -152,11 +166,17 @@ export const CryptoStats = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Price Prediction</p>
                 <h3 className="text-2xl font-bold mt-1">
-                  ${(btcData.currentPrice * 1.1).toLocaleString()}
+                  ${btcData.prediction.price.toLocaleString()}
                 </h3>
-                <p className="text-sm text-emerald-500 flex items-center mt-1">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  Potential +10%
+                <p className={`text-sm flex items-center mt-1 ${
+                  btcData.prediction.trend === 'up' ? "text-emerald-500" : "text-red-500"
+                }`}>
+                  {btcData.prediction.trend === 'up' ? (
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 mr-1" />
+                  )}
+                  Predicted {btcData.prediction.trend === 'up' ? 'increase' : 'decrease'}
                 </p>
               </div>
               <LineChart className="h-8 w-8 text-muted-foreground" />

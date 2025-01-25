@@ -47,7 +47,13 @@ export const CryptoStats = () => {
       if (error) throw error;
 
       // Validate the required data structure
-      if (!data || typeof data.currentPrice !== 'number' || !data.prediction || !data.prediction.trend) {
+      if (!data || 
+          typeof data.currentPrice !== 'number' || 
+          !data.prediction || 
+          !data.prediction.trend || 
+          !data.prediction.price || 
+          !data.prediction.confidence) {
+        console.error('Invalid data structure:', data);
         throw new Error('Invalid data structure received from API');
       }
 
@@ -97,11 +103,15 @@ export const CryptoStats = () => {
     price: item.close,
   })) : [];
 
-  // Ensure prediction data exists before rendering prediction-related components
-  const hasPredictionData = btcData.prediction && 
-    typeof btcData.prediction.price === 'number' && 
-    typeof btcData.prediction.trend === 'string' &&
-    typeof btcData.prediction.confidence === 'number';
+  // Chart configuration
+  const chartConfig = {
+    price: {
+      theme: {
+        light: "hsl(var(--primary))",
+        dark: "hsl(var(--primary))",
+      },
+    },
+  };
 
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 relative">
@@ -127,7 +137,7 @@ export const CryptoStats = () => {
               </div>
               <div className="h-16 w-24">
                 {chartData.length > 0 && (
-                  <ChartContainer>
+                  <ChartContainer config={chartConfig}>
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
@@ -149,7 +159,7 @@ export const CryptoStats = () => {
             </div>
           </Card>
 
-          {hasPredictionData && (
+          {btcData.prediction && (
             <>
               <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
                 <div className="flex items-center justify-between">

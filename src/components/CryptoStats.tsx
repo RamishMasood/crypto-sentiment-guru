@@ -45,7 +45,13 @@ export const CryptoStats = () => {
       });
 
       if (error) throw error;
-      setBtcData(data);
+
+      // Validate the required data structure
+      if (!data || typeof data.currentPrice !== 'number' || !data.prediction || !data.prediction.trend) {
+        throw new Error('Invalid data structure received from API');
+      }
+
+      setBtcData(data as CryptoData);
     } catch (error) {
       console.error('Error fetching crypto data:', error);
       toast({
@@ -91,6 +97,12 @@ export const CryptoStats = () => {
     price: item.close,
   })) : [];
 
+  // Ensure prediction data exists before rendering prediction-related components
+  const hasPredictionData = btcData.prediction && 
+    typeof btcData.prediction.price === 'number' && 
+    typeof btcData.prediction.trend === 'string' &&
+    typeof btcData.prediction.confidence === 'number';
+
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-7xl mx-auto">
@@ -115,16 +127,7 @@ export const CryptoStats = () => {
               </div>
               <div className="h-16 w-24">
                 {chartData.length > 0 && (
-                  <ChartContainer
-                    config={{
-                      price: {
-                        theme: {
-                          light: "hsl(var(--primary))",
-                          dark: "hsl(var(--primary))",
-                        },
-                      },
-                    }}
-                  >
+                  <ChartContainer>
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
@@ -146,42 +149,46 @@ export const CryptoStats = () => {
             </div>
           </Card>
 
-          <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Market Sentiment</p>
-                <h3 className="text-2xl font-bold mt-1">
-                  {btcData.prediction.trend === 'up' ? "Bullish" : "Bearish"}
-                </h3>
-                <p className="text-sm text-muted-foreground flex items-center mt-1">
-                  {(btcData.prediction.confidence * 100).toFixed(0)}% confidence
-                </p>
-              </div>
-              <BrainCog className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </Card>
+          {hasPredictionData && (
+            <>
+              <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Market Sentiment</p>
+                    <h3 className="text-2xl font-bold mt-1">
+                      {btcData.prediction.trend === 'up' ? "Bullish" : "Bearish"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground flex items-center mt-1">
+                      {(btcData.prediction.confidence * 100).toFixed(0)}% confidence
+                    </p>
+                  </div>
+                  <BrainCog className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </Card>
 
-          <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Price Prediction</p>
-                <h3 className="text-2xl font-bold mt-1">
-                  ${btcData.prediction.price.toLocaleString()}
-                </h3>
-                <p className={`text-sm flex items-center mt-1 ${
-                  btcData.prediction.trend === 'up' ? "text-emerald-500" : "text-red-500"
-                }`}>
-                  {btcData.prediction.trend === 'up' ? (
-                    <TrendingUp className="h-4 w-4 mr-1" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 mr-1" />
-                  )}
-                  Predicted {btcData.prediction.trend === 'up' ? 'increase' : 'decrease'}
-                </p>
-              </div>
-              <LineChart className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </Card>
+              <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Price Prediction</p>
+                    <h3 className="text-2xl font-bold mt-1">
+                      ${btcData.prediction.price.toLocaleString()}
+                    </h3>
+                    <p className={`text-sm flex items-center mt-1 ${
+                      btcData.prediction.trend === 'up' ? "text-emerald-500" : "text-red-500"
+                    }`}>
+                      {btcData.prediction.trend === 'up' ? (
+                        <TrendingUp className="h-4 w-4 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4 mr-1" />
+                      )}
+                      Predicted {btcData.prediction.trend === 'up' ? 'increase' : 'decrease'}
+                    </p>
+                  </div>
+                  <LineChart className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </Card>
+            </>
+          )}
         </div>
       </div>
     </section>

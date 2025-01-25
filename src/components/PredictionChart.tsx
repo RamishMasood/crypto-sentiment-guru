@@ -6,6 +6,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Legend,
 } from "recharts";
 import { format } from "date-fns";
 
@@ -23,6 +24,17 @@ interface PredictionChartProps {
       month: { time: number; price: number; confidence: number };
       threeMonths: { time: number; price: number; confidence: number };
       sixMonths: { time: number; price: number; confidence: number };
+    };
+    technicalAnalysis: {
+      ma7: number;
+      ma14: number;
+      ma30: number;
+      ma50: number;
+      ma200: number;
+      rsi: number;
+      volatility: number;
+      volumeTrend: string;
+      marketSentiment: string;
     };
   } | null;
   symbol: string;
@@ -46,11 +58,21 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
     }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
+  const technicalData = data.technicalAnalysis;
+
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">
-        {symbol} Price Prediction
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">
+          {symbol} Price Prediction
+        </h2>
+        <div className="text-sm text-muted-foreground">
+          <div>RSI: {technicalData.rsi.toFixed(2)}</div>
+          <div>Volatility: {technicalData.volatility.toFixed(2)}%</div>
+          <div>Sentiment: {technicalData.marketSentiment}</div>
+        </div>
+      </div>
+      
       <div className="h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData}>
@@ -100,15 +122,33 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
                 );
               }}
             />
+            <Legend />
             <Area
               type="monotone"
               dataKey="price"
               stroke="hsl(var(--primary))"
               fill="url(#colorHistorical)"
               strokeWidth={2}
+              name="Historical Price"
             />
           </AreaChart>
         </ResponsiveContainer>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+        {Object.entries(data.predictions).map(([timeframe, prediction]) => (
+          <div key={timeframe} className="p-3 rounded-lg bg-card/50">
+            <div className="text-sm font-medium mb-1">
+              {timeframe.charAt(0).toUpperCase() + timeframe.slice(1)} Prediction
+            </div>
+            <div className="text-lg font-bold">
+              ${prediction.price.toLocaleString()}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Confidence: {(prediction.confidence * 100).toFixed(0)}%
+            </div>
+          </div>
+        ))}
       </div>
     </Card>
   );

@@ -23,11 +23,14 @@ interface CryptoData {
     time: number;
     close: number;
   }>;
-  predictions: Array<{
-    time: number;
-    price: number;
-    confidence: number;
-  }>;
+  predictions: {
+    day: { time: number; price: number; confidence: number };
+    week: { time: number; price: number; confidence: number };
+    twoWeeks: { time: number; price: number; confidence: number };
+    month: { time: number; price: number; confidence: number };
+    threeMonths: { time: number; price: number; confidence: number };
+    sixMonths: { time: number; price: number; confidence: number };
+  };
 }
 
 export default function Dashboard() {
@@ -78,6 +81,13 @@ export default function Dashboard() {
       });
 
       if (error) throw error;
+      
+      // Validate the data structure
+      if (!data || typeof data.currentPrice !== 'number' || !data.predictions) {
+        console.error('Invalid data structure:', data);
+        throw new Error('Invalid data structure received from API');
+      }
+
       setCryptoData(data);
     } catch (error) {
       console.error("Error fetching crypto data:", error);
@@ -236,18 +246,18 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {selectedCrypto && (
+        {selectedCrypto && cryptoData && (
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-3">
               <PredictionChart data={cryptoData} symbol={selectedCrypto} />
             </div>
             <div className="lg:col-span-1">
-              {cryptoData?.predictions && (
+              {cryptoData.predictions && (
                 <Card className="p-6">
                   <h3 className="text-lg font-semibold mb-4">Price Predictions</h3>
                   <div className="space-y-4">
-                    {cryptoData.predictions.map((prediction, index) => (
-                      <div key={index} className="flex flex-col">
+                    {Object.entries(cryptoData.predictions).map(([timeframe, prediction]) => (
+                      <div key={timeframe} className="flex flex-col">
                         <span className="text-sm text-muted-foreground">
                           {format(new Date(prediction.time * 1000), 'MMM dd, yyyy')}
                         </span>

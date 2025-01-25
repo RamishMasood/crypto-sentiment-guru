@@ -26,24 +26,29 @@ serve(async (req) => {
       hourlyHistoryResponse.json()
     ]);
 
-    // Simple price prediction based on moving average
+    // Calculate predictions for future dates
     const prices = dailyHistory.Data.Data.map((d: any) => d.close);
     const ma7 = prices.slice(-7).reduce((a: number, b: number) => a + b, 0) / 7;
     const ma14 = prices.slice(-14).reduce((a: number, b: number) => a + b, 0) / 14;
-    const trend = ma7 > ma14 ? 'up' : 'down';
-    const prediction = trend === 'up' ? 
-      priceData.USD * 1.1 : // 10% increase prediction
-      priceData.USD * 0.9;  // 10% decrease prediction
+    const trend = ma7 > ma14 ? 1.1 : 0.9; // 10% up or down
+
+    // Generate predictions for next 6 months
+    const predictions = Array.from({ length: 6 }).map((_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() + i + 1);
+      const confidence = Math.max(0.4, 0.8 - (i * 0.1)); // Confidence decreases over time
+      return {
+        time: Math.floor(date.getTime() / 1000),
+        price: priceData.USD * Math.pow(trend, i + 1),
+        confidence,
+      };
+    });
 
     const responseData = {
       currentPrice: priceData.USD,
       dailyHistory: dailyHistory.Data.Data,
       hourlyHistory: hourlyHistory.Data.Data,
-      prediction: {
-        price: prediction,
-        trend: trend,
-        confidence: 0.7 // Simplified confidence score
-      }
+      predictions,
     };
 
     console.log('Crypto data response:', JSON.stringify(responseData));

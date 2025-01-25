@@ -8,15 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { CryptoStats } from "@/components/CryptoStats";
 import { Portfolio } from "@/components/Portfolio";
+import { PredictionChart } from "@/components/PredictionChart";
 import { LogOut, Plus, Trash2 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { format } from "date-fns";
 
 interface WatchlistItem {
   id: string;
@@ -28,6 +22,11 @@ interface CryptoData {
   history: Array<{
     time: number;
     close: number;
+  }>;
+  predictions: Array<{
+    time: number;
+    price: number;
+    confidence: number;
   }>;
 }
 
@@ -169,12 +168,6 @@ export default function Dashboard() {
     }
   };
 
-  // Safely prepare chart data with null checks
-  const chartData = cryptoData?.history ? cryptoData.history.map((item) => ({
-    date: new Date(item.time * 1000).toLocaleDateString(),
-    price: item.close,
-  })) : [];
-
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
@@ -243,68 +236,34 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {selectedCrypto && cryptoData && (
-          <Card className="mt-6 p-6">
-            <h2 className="text-xl font-semibold mb-4">
-              {selectedCrypto} Price Chart
-            </h2>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="0%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0.2}
-                      />
-                      <stop
-                        offset="100%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="date"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickFormatter={(value) => `$${value.toLocaleString()}`}
-                  />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      return (
-                        <div className="rounded-lg border bg-background p-2 shadow-sm">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex flex-col">
-                              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Price
-                              </span>
-                              <span className="font-bold text-muted-foreground">
-                                ${payload[0].value.toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="price"
-                    stroke="hsl(var(--primary))"
-                    fill="url(#colorPrice)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+        {selectedCrypto && (
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3">
+              <PredictionChart data={cryptoData} symbol={selectedCrypto} />
             </div>
-          </Card>
+            <div className="lg:col-span-1">
+              {cryptoData?.predictions && (
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Price Predictions</h3>
+                  <div className="space-y-4">
+                    {cryptoData.predictions.map((prediction, index) => (
+                      <div key={index} className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(prediction.time * 1000), 'MMM dd, yyyy')}
+                        </span>
+                        <span className="text-lg font-bold">
+                          ${prediction.price.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Confidence: {(prediction.confidence * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
+          </div>
         )}
       </main>
     </div>

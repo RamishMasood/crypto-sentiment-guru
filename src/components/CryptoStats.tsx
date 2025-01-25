@@ -31,6 +31,21 @@ interface CryptoData {
     trend: 'up' | 'down';
     confidence: number;
   };
+  predictions: {
+    day: { time: number; price: number; confidence: number };
+    week: { time: number; price: number; confidence: number };
+    twoWeeks: { time: number; price: number; confidence: number };
+    month: { time: number; price: number; confidence: number };
+    threeMonths: { time: number; price: number; confidence: number };
+    sixMonths: { time: number; price: number; confidence: number };
+  };
+  technicalAnalysis: {
+    ma7: number;
+    ma14: number;
+    ma30: number;
+    volumeTrend: string;
+    priceChange: number;
+  };
 }
 
 export const CryptoStats = () => {
@@ -52,7 +67,8 @@ export const CryptoStats = () => {
           !data.prediction || 
           !data.prediction.trend || 
           !data.prediction.price || 
-          !data.prediction.confidence) {
+          !data.prediction.confidence ||
+          !data.predictions) {
         console.error('Invalid data structure:', data);
         throw new Error('Invalid data structure received from API');
       }
@@ -72,7 +88,7 @@ export const CryptoStats = () => {
 
   useEffect(() => {
     fetchCryptoData();
-    const interval = setInterval(fetchCryptoData, 30000); // Update every 30 seconds
+    const interval = setInterval(fetchCryptoData, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -92,18 +108,12 @@ export const CryptoStats = () => {
     );
   }
 
-  // Safely calculate price change using daily history
-  const priceChange = btcData.dailyHistory && btcData.dailyHistory.length > 0
-    ? ((btcData.currentPrice - btcData.dailyHistory[0].close) / btcData.dailyHistory[0].close) * 100
-    : 0;
-
-  // Prepare chart data from hourly history for more granular view
+  const priceChange = btcData.technicalAnalysis.priceChange;
   const chartData = btcData.hourlyHistory ? btcData.hourlyHistory.map((item) => ({
     date: new Date(item.time * 1000).toLocaleDateString(),
     price: item.close,
   })) : [];
 
-  // Chart configuration
   const chartConfig = {
     price: {
       theme: {
@@ -171,6 +181,9 @@ export const CryptoStats = () => {
                     <p className="text-sm text-muted-foreground flex items-center mt-1">
                       {(btcData.prediction.confidence * 100).toFixed(0)}% confidence
                     </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Volume: {btcData.technicalAnalysis.volumeTrend}
+                    </p>
                   </div>
                   <BrainCog className="h-8 w-8 text-muted-foreground" />
                 </div>
@@ -179,20 +192,36 @@ export const CryptoStats = () => {
               <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Price Prediction</p>
-                    <h3 className="text-2xl font-bold mt-1">
-                      ${btcData.prediction.price.toLocaleString()}
-                    </h3>
-                    <p className={`text-sm flex items-center mt-1 ${
-                      btcData.prediction.trend === 'up' ? "text-emerald-500" : "text-red-500"
-                    }`}>
-                      {btcData.prediction.trend === 'up' ? (
-                        <TrendingUp className="h-4 w-4 mr-1" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4 mr-1" />
-                      )}
-                      Predicted {btcData.prediction.trend === 'up' ? 'increase' : 'decrease'}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Price Predictions</p>
+                    <div className="space-y-2 mt-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">24h</p>
+                        <p className="text-sm font-medium">
+                          ${btcData.predictions.day.price.toLocaleString()} 
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({(btcData.predictions.day.confidence * 100).toFixed(0)}%)
+                          </span>
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">7d</p>
+                        <p className="text-sm font-medium">
+                          ${btcData.predictions.week.price.toLocaleString()}
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({(btcData.predictions.week.confidence * 100).toFixed(0)}%)
+                          </span>
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">30d</p>
+                        <p className="text-sm font-medium">
+                          ${btcData.predictions.month.price.toLocaleString()}
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({(btcData.predictions.month.confidence * 100).toFixed(0)}%)
+                          </span>
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   <LineChart className="h-8 w-8 text-muted-foreground" />
                 </div>

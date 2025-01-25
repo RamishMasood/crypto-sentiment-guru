@@ -16,11 +16,14 @@ interface PredictionChartProps {
       time: number;
       close: number;
     }>;
-    predictions: Array<{
-      time: number;
-      price: number;
-      confidence: number;
-    }>;
+    predictions: {
+      day: { time: number; price: number; confidence: number };
+      week: { time: number; price: number; confidence: number };
+      twoWeeks: { time: number; price: number; confidence: number };
+      month: { time: number; price: number; confidence: number };
+      threeMonths: { time: number; price: number; confidence: number };
+      sixMonths: { time: number; price: number; confidence: number };
+    };
   } | null;
   symbol: string;
 }
@@ -35,10 +38,10 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
       price: item.close,
       type: 'historical'
     })),
-    ...(data.predictions || []).map((item) => ({
-      date: new Date(item.time * 1000),
-      price: item.price,
-      confidence: item.confidence,
+    ...Object.values(data.predictions || {}).map((prediction) => ({
+      date: new Date(prediction.time * 1000),
+      price: prediction.price,
+      confidence: prediction.confidence,
       type: 'prediction'
     }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());

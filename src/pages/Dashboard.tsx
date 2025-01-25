@@ -31,6 +31,17 @@ interface CryptoData {
     threeMonths: { time: number; price: number; confidence: number };
     sixMonths: { time: number; price: number; confidence: number };
   };
+  technicalAnalysis: {
+    ma7: number;
+    ma14: number;
+    ma30: number;
+    ma50: number;
+    ma200: number;
+    rsi: number;
+    volatility: number;
+    volumeTrend: string;
+    marketSentiment: string;
+  };
 }
 
 export default function Dashboard() {

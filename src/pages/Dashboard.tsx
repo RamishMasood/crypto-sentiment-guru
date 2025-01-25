@@ -63,6 +63,7 @@ export default function Dashboard() {
         setSelectedCrypto(data[0].cryptocurrency);
       }
     } catch (error: any) {
+      console.error("Error fetching watchlist:", error);
       toast({
         title: "Error",
         description: "Failed to fetch watchlist",
@@ -80,6 +81,7 @@ export default function Dashboard() {
       if (error) throw error;
       setCryptoData(data);
     } catch (error) {
+      console.error("Error fetching crypto data:", error);
       toast({
         title: "Error",
         description: "Failed to fetch crypto data",
@@ -118,6 +120,7 @@ export default function Dashboard() {
       setNewCrypto("");
       fetchWatchlist();
     } catch (error: any) {
+      console.error("Error adding to watchlist:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -142,6 +145,7 @@ export default function Dashboard() {
 
       fetchWatchlist();
     } catch (error: any) {
+      console.error("Error removing from watchlist:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -156,6 +160,7 @@ export default function Dashboard() {
       if (error) throw error;
       navigate("/auth");
     } catch (error: any) {
+      console.error("Error signing out:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -164,10 +169,11 @@ export default function Dashboard() {
     }
   };
 
-  const chartData = cryptoData?.history.map((item) => ({
+  // Safely prepare chart data with null checks
+  const chartData = cryptoData?.history ? cryptoData.history.map((item) => ({
     date: new Date(item.time * 1000).toLocaleDateString(),
     price: item.close,
-  })) || [];
+  })) : [];
 
   return (
     <div className="min-h-screen bg-background">

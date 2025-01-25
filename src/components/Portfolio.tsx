@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/AuthProvider";
 
 interface PortfolioItem {
   id: string;
@@ -21,6 +22,7 @@ export const Portfolio = () => {
   const [quantity, setQuantity] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchPortfolio = async () => {
     try {
@@ -65,7 +67,7 @@ export const Portfolio = () => {
 
   const addToPortfolio = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCrypto.trim() || !quantity || !purchasePrice) return;
+    if (!newCrypto.trim() || !quantity || !purchasePrice || !user) return;
 
     try {
       const { error } = await supabase.from("portfolios").insert([
@@ -73,6 +75,7 @@ export const Portfolio = () => {
           cryptocurrency: newCrypto.toUpperCase(),
           quantity: Number(quantity),
           purchase_price: Number(purchasePrice),
+          user_id: user.id
         },
       ]);
 

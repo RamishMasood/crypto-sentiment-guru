@@ -20,7 +20,7 @@ serve(async (req) => {
     const [priceData, historicalData, socialData] = await Promise.all([
       // Current price and OHLCV data
       fetch(`https://min-api.cryptocompare.com/data/price?fsym=${symbol}&tsyms=USD&api_key=${cryptoCompareApiKey}`),
-      // Historical minute data for the last 24 hours
+      // Historical minute data for detailed analysis
       fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${symbol}&tsym=USD&limit=1440&api_key=${cryptoCompareApiKey}`),
       // Social sentiment data using FireCrawl
       fetch(`https://api.firecrawl.xyz/scrape`, {
@@ -30,10 +30,13 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          urls: [`https://twitter.com/search?q=${symbol}`, `https://reddit.com/r/cryptocurrency/search?q=${symbol}`],
+          urls: [
+            `https://twitter.com/search?q=${symbol}%20crypto`,
+            `https://reddit.com/r/cryptocurrency/search?q=${symbol}`
+          ],
           scrapeOptions: {
             formats: ['text'],
-            selectors: ['.tweet-text', '.post-title']
+            selectors: ['.tweet-text', '.post-title', '.post-content']
           }
         })
       })
@@ -45,11 +48,13 @@ serve(async (req) => {
       socialData.json()
     ]);
 
-    // Calculate technical indicators
+    // Process historical data
     const prices = historicalResponse.Data.Data.map((d: any) => d.close);
     const volumes = historicalResponse.Data.Data.map((d: any) => d.volumeto);
-    
-    // Calculate RSI
+    const highs = historicalResponse.Data.Data.map((d: any) => d.high);
+    const lows = historicalResponse.Data.Data.map((d: any) => d.low);
+
+    // Calculate technical indicators
     const calculateRSI = (prices: number[], period = 14) => {
       const changes = prices.slice(1).map((price, i) => price - prices[i]);
       const gains = changes.map(change => change > 0 ? change : 0);
@@ -62,12 +67,10 @@ serve(async (req) => {
       return 100 - (100 / (1 + RS));
     };
 
-    // Calculate Moving Averages
     const calculateMA = (data: number[], period: number) => {
       return data.slice(-period).reduce((a, b) => a + b, 0) / period;
     };
 
-    // Calculate Bollinger Bands
     const calculateBollingerBands = (data: number[], period = 20) => {
       const ma = calculateMA(data, period);
       const stdDev = Math.sqrt(
@@ -77,6 +80,40 @@ serve(async (req) => {
         upper: ma + (2 * stdDev),
         middle: ma,
         lower: ma - (2 * stdDev)
+      };
+    };
+
+    // Analyze social sentiment
+    const analyzeSentiment = (data: any) => {
+      const sentimentKeywords = {
+        positive: ['bullish', 'buy', 'moon', 'pump', 'growth', 'potential', 'undervalued'],
+        negative: ['bearish', 'sell', 'dump', 'crash', 'overvalued', 'scam']
+      };
+
+      let positiveCount = 0;
+      let negativeCount = 0;
+      let totalMentions = 0;
+
+      const content = data.join(' ').toLowerCase();
+      sentimentKeywords.positive.forEach(keyword => {
+        const count = (content.match(new RegExp(keyword, 'g')) || []).length;
+        positiveCount += count;
+      });
+      sentimentKeywords.negative.forEach(keyword => {
+        const count = (content.match(new RegExp(keyword, 'g')) || []).length;
+        negativeCount += count;
+      });
+
+      totalMentions = positiveCount + negativeCount;
+      const sentimentScore = totalMentions > 0 
+        ? (positiveCount - negativeCount) / totalMentions 
+        : 0;
+
+      return {
+        score: sentimentScore,
+        total: totalMentions,
+        positive: positiveCount,
+        negative: negativeCount
       };
     };
 
@@ -94,6 +131,8 @@ serve(async (req) => {
       // Market Trend Analysis
       const shortTermTrend = ma7 > ma25 ? 1.15 : 0.85;
       const rsiSignal = rsi > 70 ? 0.8 : rsi < 30 ? 1.2 : 1;
+      
+      // Volatility Analysis
       const volatility = Math.sqrt(
         prices.slice(-30).reduce((sum, price, i, arr) => {
           if (i === 0) return 0;
@@ -107,22 +146,27 @@ serve(async (req) => {
       const historicalVolume = calculateMA(volumes, 30);
       const volumeTrend = recentVolume > historicalVolume ? 1.1 : 0.9;
 
-      // Combine factors for final prediction
+      // Social Sentiment Impact
+      const sentiment = analyzeSentiment(socialResponse.data || []);
+      const sentimentMultiplier = 1 + (sentiment.score * 0.1);
+
+      // Combine all factors for final prediction
       const technicalMultiplier = (shortTermTrend + rsiSignal + volumeTrend) / 3;
       const volatilityAdjustment = Math.max(0.7, 1 - (volatility / 100));
+      const finalMultiplier = technicalMultiplier * sentimentMultiplier * volatilityAdjustment;
       
       // Calculate confidence based on multiple factors
       const confidence = Math.min(0.98, 
         (baseConfidence * 0.4 + 
         Math.abs(shortTermTrend - 1) * 0.2 + 
         Math.abs(volumeTrend - 1) * 0.2 + 
-        Math.abs(rsiSignal - 1) * 0.2) * 
+        Math.abs(sentiment.score) * 0.2) * 
         volatilityAdjustment
       );
 
       return {
         time: Math.floor(date.getTime() / 1000),
-        price: priceResponse.USD * Math.pow(technicalMultiplier, timeframe/7),
+        price: priceResponse.USD * Math.pow(finalMultiplier, timeframe/7),
         confidence,
       };
     };
@@ -160,6 +204,7 @@ serve(async (req) => {
       history: historicalResponse.Data.Data,
       predictions,
       technicalAnalysis,
+      socialSentiment: analyzeSentiment(socialResponse.data || [])
     };
 
     return new Response(

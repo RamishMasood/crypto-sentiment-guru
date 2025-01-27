@@ -13,51 +13,32 @@ serve(async (req) => {
   try {
     const { symbol = 'BTC' } = await req.json();
     const cryptoCompareApiKey = Deno.env.get('CRYPTOCOMPARE_API_KEY');
-    const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY');
 
     console.log('Starting enhanced prediction analysis for:', symbol);
 
-    // Fetch price data from CryptoCompare
-    const [priceData, historicalData, orderBookData] = await Promise.all([
+    // Fetch comprehensive data from CryptoCompare
+    const [priceData, historicalDaily, historicalHourly, orderBookData, socialStats] = await Promise.all([
       fetch(`https://min-api.cryptocompare.com/data/price?fsym=${symbol}&tsyms=USD&api_key=${cryptoCompareApiKey}`),
       fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${symbol}&tsym=USD&limit=30&api_key=${cryptoCompareApiKey}`),
-      fetch(`https://min-api.cryptocompare.com/data/v2/ob/l2/snapshot?fsym=${symbol}&tsym=USD&api_key=${cryptoCompareApiKey}`)
+      fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${symbol}&tsym=USD&limit=24&api_key=${cryptoCompareApiKey}`),
+      fetch(`https://min-api.cryptocompare.com/data/v2/ob/l2/snapshot?fsym=${symbol}&tsym=USD&api_key=${cryptoCompareApiKey}`),
+      fetch(`https://min-api.cryptocompare.com/data/social/coin/latest?coinId=${symbol}&api_key=${cryptoCompareApiKey}`)
     ]);
 
-    const [priceResponse, historicalResponse, orderBookResponse] = await Promise.all([
+    const [priceResponse, historicalDailyResponse, historicalHourlyResponse, orderBookResponse, socialStatsResponse] = await Promise.all([
       priceData.json(),
-      historicalData.json(),
-      orderBookData.json()
+      historicalDaily.json(),
+      historicalHourly.json(),
+      orderBookData.json(),
+      socialStats.json()
     ]);
 
-    console.log('Successfully fetched price data');
-
-    // Fetch sentiment data using FireCrawl
-    const sentimentResponse = await fetch('https://api.firecrawl.xyz/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${firecrawlApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        urls: [
-          `https://twitter.com/search?q=${symbol}%20crypto`,
-          `https://reddit.com/r/cryptocurrency/search?q=${symbol}`,
-          `https://www.tradingview.com/symbols/${symbol}USD/`
-        ],
-        scrapeOptions: {
-          formats: ['text'],
-          selectors: ['.tweet-text', '.post-title', '.post-content', '.tv-symbol-price-quote__value']
-        }
-      })
-    });
-
-    const sentimentData = await sentimentResponse.json();
-    console.log('Successfully fetched sentiment data');
+    console.log('Successfully fetched market data');
 
     // Process historical price data
-    const prices = historicalResponse.Data.Data.map((d: any) => d.close);
-    const volumes = historicalResponse.Data.Data.map((d: any) => d.volumeto);
+    const dailyPrices = historicalDailyResponse.Data.Data.map((d: any) => d.close);
+    const hourlyPrices = historicalHourlyResponse.Data.Data.map((d: any) => d.close);
+    const volumes = historicalDailyResponse.Data.Data.map((d: any) => d.volumeto);
 
     // Calculate technical indicators
     const calculateRSI = (prices: number[], period = 14) => {
@@ -79,45 +60,27 @@ serve(async (req) => {
       return Math.sqrt(variance * 252) * 100;
     };
 
-    // Analyze sentiment
-    const analyzeSentiment = (data: any) => {
-      const sentimentKeywords = {
-        positive: ['bullish', 'buy', 'moon', 'pump', 'growth', 'potential', 'undervalued'],
-        negative: ['bearish', 'sell', 'dump', 'crash', 'overvalued', 'scam', 'weak']
-      };
+    // Market depth analysis
+    const orderBookBids = orderBookResponse.Data?.bids || [];
+    const orderBookAsks = orderBookResponse.Data?.asks || [];
+    const buyPressure = orderBookBids.reduce((sum: number, [price, quantity]: number[]) => sum + price * quantity, 0);
+    const sellPressure = orderBookAsks.reduce((sum: number, [price, quantity]: number[]) => sum + price * quantity, 0);
+    const orderBookRatio = buyPressure / (sellPressure || 1);
 
-      let positiveCount = 0;
-      let negativeCount = 0;
-      const content = (data?.data || []).join(' ').toLowerCase();
-      
-      sentimentKeywords.positive.forEach(keyword => {
-        positiveCount += (content.match(new RegExp(keyword, 'g')) || []).length;
-      });
+    // Social metrics analysis
+    const socialMetrics = socialStatsResponse.Data || {};
+    const redditActiveUsers = socialMetrics.Reddit?.active_users || 0;
+    const twitterFollowers = socialMetrics.Twitter?.followers || 0;
+    const socialScore = (redditActiveUsers * 0.4 + twitterFollowers * 0.6) / 1000;
 
-      sentimentKeywords.negative.forEach(keyword => {
-        negativeCount += (content.match(new RegExp(keyword, 'g')) || []).length;
-      });
-
-      const totalMentions = positiveCount + negativeCount;
-      return totalMentions > 0 ? (positiveCount - negativeCount) / totalMentions : 0;
-    };
-
-    // Generate predictions
+    // Generate predictions based on combined analysis
     const generatePrediction = (timeframe: number) => {
       const currentPrice = priceResponse.USD;
-      const rsi = calculateRSI(prices);
-      const volatility = calculateVolatility(prices);
-      const sentiment = analyzeSentiment(sentimentData);
+      const rsi = calculateRSI(dailyPrices);
+      const volatility = calculateVolatility(dailyPrices);
       
-      // Market depth analysis
-      const orderBookBids = orderBookResponse.Data?.bids || [];
-      const orderBookAsks = orderBookResponse.Data?.asks || [];
-      const buyPressure = orderBookBids.reduce((sum: number, [price, quantity]: number[]) => sum + price * quantity, 0);
-      const sellPressure = orderBookAsks.reduce((sum: number, [price, quantity]: number[]) => sum + price * quantity, 0);
-      const orderBookRatio = buyPressure / (sellPressure || 1);
-
       // Technical factors
-      const momentum = (currentPrice / prices[prices.length - 7] - 1) * 100;
+      const momentum = (currentPrice / dailyPrices[dailyPrices.length - 7] - 1) * 100;
       const volumeTrend = volumes.slice(-7).reduce((a, b) => a + b, 0) / 7 > 
                          volumes.slice(-30, -7).reduce((a, b) => a + b, 0) / 23;
       
@@ -129,14 +92,14 @@ serve(async (req) => {
         (orderBookRatio > 1 ? 0.1 : -0.1)
       );
 
-      const sentimentImpact = sentiment * 0.3;
+      const socialImpact = (socialScore > 500 ? 0.1 : -0.1);
       const volatilityAdjustment = 1 - (volatility / 200);
-      const trend = 1 + (technicalScore + sentimentImpact) * volatilityAdjustment;
+      const trend = 1 + (technicalScore + socialImpact) * volatilityAdjustment;
 
       // Calculate confidence based on multiple factors
       const confidence = Math.min(0.95, Math.abs(technicalScore) * 0.4 + 
-                                     Math.abs(sentiment) * 0.3 +
-                                     (orderBookRatio > 0.8 && orderBookRatio < 1.2 ? 0.3 : 0.1));
+                                     (orderBookRatio > 0.8 && orderBookRatio < 1.2 ? 0.3 : 0.1) +
+                                     (socialScore > 100 ? 0.2 : 0.1));
 
       const date = new Date();
       date.setDate(date.getDate() + timeframe);
@@ -144,7 +107,7 @@ serve(async (req) => {
       return {
         time: Math.floor(date.getTime() / 1000),
         price: currentPrice * Math.pow(trend, timeframe/7),
-        confidence: confidence * 100
+        confidence
       };
     };
 
@@ -158,22 +121,28 @@ serve(async (req) => {
     };
 
     const technicalAnalysis = {
-      rsi: calculateRSI(prices),
-      volatility: calculateVolatility(prices),
-      ma7: prices.slice(-7).reduce((a, b) => a + b, 0) / 7,
-      ma14: prices.slice(-14).reduce((a, b) => a + b, 0) / 14,
-      ma30: prices.slice(-30).reduce((a, b) => a + b, 0) / 30,
-      ma50: prices.slice(-50).reduce((a, b) => a + b, 0) / 50,
-      ma200: prices.slice(-200).reduce((a, b) => a + b, 0) / 200,
+      rsi: calculateRSI(dailyPrices),
+      volatility: calculateVolatility(dailyPrices),
+      ma7: dailyPrices.slice(-7).reduce((a, b) => a + b, 0) / 7,
+      ma14: dailyPrices.slice(-14).reduce((a, b) => a + b, 0) / 14,
+      ma30: dailyPrices.slice(-30).reduce((a, b) => a + b, 0) / 30,
+      ma50: dailyPrices.slice(-50).reduce((a, b) => a + b, 0) / 50,
+      ma200: dailyPrices.slice(-200).reduce((a, b) => a + b, 0) / 200,
       volumeTrend: volumes.slice(-7).reduce((a, b) => a + b, 0) / 7 > 
                   volumes.slice(-30, -7).reduce((a, b) => a + b, 0) / 23 
                   ? "increasing" : "decreasing",
-      marketSentiment: analyzeSentiment(sentimentData) > 0 ? "bullish" : "bearish"
+      priceChange: ((priceResponse.USD - dailyPrices[0]) / dailyPrices[0]) * 100
     };
 
     const responseData = {
       currentPrice: priceResponse.USD,
-      history: historicalResponse.Data.Data,
+      dailyHistory: historicalDailyResponse.Data.Data,
+      hourlyHistory: historicalHourlyResponse.Data.Data,
+      prediction: {
+        price: predictions.day.price,
+        trend: technicalAnalysis.priceChange >= 0 ? 'up' : 'down',
+        confidence: predictions.day.confidence
+      },
       predictions,
       technicalAnalysis,
       lastUpdated: new Date().toISOString()

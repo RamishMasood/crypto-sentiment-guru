@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { tensorflow } from "npm:@tensorflow/tfjs";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,17 +28,11 @@ serve(async (req) => {
 
     // Fetch multiple data sources in parallel
     const [priceData, historicalData, minuteData, hourData, orderBookData, socialData] = await Promise.all([
-      // Current price data
       fetch(`https://min-api.cryptocompare.com/data/price?fsym=${symbol}&tsyms=USD&api_key=${cryptoCompareApiKey}`),
-      // Historical daily data (60 days)
       fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${symbol}&tsym=USD&limit=60&api_key=${cryptoCompareApiKey}`),
-      // Minute-level data (240 minutes)
       fetch(`https://min-api.cryptocompare.com/data/v2/histominute?fsym=${symbol}&tsym=USD&limit=240&api_key=${cryptoCompareApiKey}`),
-      // Hourly data (168 hours)
       fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${symbol}&tsym=USD&limit=168&api_key=${cryptoCompareApiKey}`),
-      // Order book data
       fetch(`https://min-api.cryptocompare.com/data/v2/ob/l2/snapshot?fsym=${symbol}&tsym=USD&api_key=${cryptoCompareApiKey}`),
-      // Social sentiment analysis using FireCrawl
       fetch(`https://api.firecrawl.xyz/scrape`, {
         method: 'POST',
         headers: {
@@ -74,10 +67,8 @@ serve(async (req) => {
     // Process historical price data
     const prices = historicalResponse.Data.Data.map((d: any) => d.close);
     const volumes = historicalResponse.Data.Data.map((d: any) => d.volumeto);
-    const minutePrices = minuteResponse.Data.Data.map((d: any) => d.close);
-    const hourPrices = hourResponse.Data.Data.map((d: any) => d.close);
 
-    // Advanced Technical Analysis Functions
+    // Technical Analysis Functions
     const calculateRSI = (prices: number[], period = 14) => {
       const changes = prices.slice(1).map((price, i) => price - prices[i]);
       const gains = changes.map(change => change > 0 ? change : 0);
@@ -90,39 +81,18 @@ serve(async (req) => {
       return 100 - (100 / (1 + RS));
     };
 
-    const calculateBollingerBands = (prices: number[], period = 20, stdDev = 2) => {
-      const sma = prices.slice(-period).reduce((a, b) => a + b, 0) / period;
-      const squaredDiffs = prices.slice(-period).map(price => Math.pow(price - sma, 2));
-      const variance = squaredDiffs.reduce((a, b) => a + b, 0) / period;
-      const std = Math.sqrt(variance);
-      
-      return {
-        upper: sma + (stdDev * std),
-        middle: sma,
-        lower: sma - (stdDev * std)
-      };
+    const calculateVolatility = (prices: number[], period = 20) => {
+      const returns = prices.slice(1).map((price, i) => (price - prices[i]) / prices[i]);
+      const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+      const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+      return Math.sqrt(variance * 252) * 100; // Annualized volatility
     };
 
-    // Enhanced LSTM-like prediction using moving averages and momentum
-    const generateLSTMPrediction = (prices: number[], volumes: number[]) => {
-      const shortMA = prices.slice(-7).reduce((a, b) => a + b, 0) / 7;
-      const longMA = prices.slice(-30).reduce((a, b) => a + b, 0) / 30;
-      const momentum = (prices[prices.length - 1] / prices[prices.length - 7] - 1) * 100;
-      const volumeChange = (volumes[volumes.length - 1] / volumes[volumes.length - 7] - 1) * 100;
-      
-      return {
-        trend: shortMA > longMA ? 'bullish' : 'bearish',
-        strength: Math.abs(shortMA - longMA) / longMA * 100,
-        momentum,
-        volumeSignal: volumeChange > 20 ? 'strong' : 'normal'
-      };
-    };
-
-    // Enhanced sentiment analysis with market psychology
+    // Enhanced sentiment analysis
     const analyzeSentiment = (data: any[]): SentimentData => {
       const sentimentKeywords = {
-        positive: ['bullish', 'buy', 'moon', 'pump', 'growth', 'potential', 'undervalued', 'accumulate', 'hodl', 'strong', 'breakout', 'support'],
-        negative: ['bearish', 'sell', 'dump', 'crash', 'overvalued', 'scam', 'weak', 'correction', 'bubble', 'resistance', 'bearish', 'sell']
+        positive: ['bullish', 'buy', 'moon', 'pump', 'growth', 'potential', 'undervalued'],
+        negative: ['bearish', 'sell', 'dump', 'crash', 'overvalued', 'scam', 'weak']
       };
 
       let positiveCount = 0;
@@ -146,26 +116,17 @@ serve(async (req) => {
       const totalMentions = positiveCount + negativeCount;
       const score = totalMentions > 0 ? (positiveCount - negativeCount) / totalMentions : 0;
 
-      return {
-        score,
-        mentions: totalMentions,
-        positiveCount,
-        negativeCount,
-        keywords
-      };
+      return { score, mentions: totalMentions, positiveCount, negativeCount, keywords };
     };
 
-    // Advanced prediction model with multiple timeframes
-    const generateEnhancedPrediction = (timeframe: number) => {
-      console.log(`Generating prediction for timeframe: ${timeframe} days`);
-      
+    // Generate prediction for different timeframes
+    const generatePrediction = (timeframe: number) => {
       const date = new Date();
       date.setDate(date.getDate() + timeframe);
       
       // Technical Analysis
       const rsi = calculateRSI(prices);
-      const bollingerBands = calculateBollingerBands(prices);
-      const lstmPrediction = generateLSTMPrediction(prices, volumes);
+      const volatility = calculateVolatility(prices);
       const currentPrice = prices[prices.length - 1];
       
       // Volume Analysis
@@ -184,28 +145,23 @@ serve(async (req) => {
       const sentiment = analyzeSentiment(socialResponse.data || []);
       const sentimentMultiplier = 1 + (sentiment.score * 0.3);
       
-      // Market Momentum from LSTM
-      const momentumFactor = lstmPrediction.momentum > 0 ? 1 + (lstmPrediction.momentum / 100) : 1 - (Math.abs(lstmPrediction.momentum) / 100);
+      // Market Momentum
+      const momentum = (currentPrice / prices[prices.length - 7] - 1) * 100;
+      const momentumFactor = momentum > 0 ? 1 + (momentum / 100) : 1 - (Math.abs(momentum) / 100);
       
       // Combined Technical Strength
       const technicalStrength = (
         (rsi > 70 ? -0.2 : rsi < 30 ? 0.2 : 0) +
-        (lstmPrediction.trend === 'bullish' ? 0.2 : -0.2) +
+        (momentum > 0 ? 0.2 : -0.2) +
         (volumeRatio > 1.5 ? 0.15 : volumeRatio < 0.5 ? -0.15 : 0) +
         (orderBookRatio > 1.2 ? 0.1 : orderBookRatio < 0.8 ? -0.1 : 0)
       );
       
       // Enhanced Confidence Calculation
-      const technicalConfidence = Math.min(0.95, Math.abs(technicalStrength) * 0.7 + 0.3);
-      const volumeConfidence = Math.min(0.95, (volumeRatio > 0.8 && volumeRatio < 1.2 ? 0.9 : 0.7));
-      const sentimentConfidence = Math.min(0.95, Math.abs(sentiment.score) * 0.6 + 0.3);
-      const lstmConfidence = Math.min(0.95, lstmPrediction.strength / 100);
-      
       const confidence = Math.min(0.95,
-        (technicalConfidence * 0.3 +
-        volumeConfidence * 0.2 +
-        sentimentConfidence * 0.2 +
-        lstmConfidence * 0.3)
+        Math.abs(technicalStrength) * 0.4 +
+        (volumeRatio > 0.8 && volumeRatio < 1.2 ? 0.3 : 0.1) +
+        Math.abs(sentiment.score) * 0.3
       );
 
       // Price Prediction
@@ -217,15 +173,6 @@ serve(async (req) => {
         ((momentumFactor - 1) * 0.2)
       ) * sentimentMultiplier;
 
-      console.log(`Prediction details for ${timeframe} days:`, {
-        technicalStrength,
-        sentimentScore: sentiment.score,
-        volumeRatio,
-        orderBookRatio,
-        lstmPrediction,
-        confidence
-      });
-
       return {
         time: Math.floor(date.getTime() / 1000),
         price: currentPrice * Math.pow(trend, timeframe/7),
@@ -233,19 +180,18 @@ serve(async (req) => {
       };
     };
 
-    // Generate predictions for different timeframes
     const predictions = {
-      hour: generateEnhancedPrediction(1/24),
-      day: generateEnhancedPrediction(1),
-      week: generateEnhancedPrediction(7),
-      twoWeeks: generateEnhancedPrediction(14),
-      month: generateEnhancedPrediction(30),
-      threeMonths: generateEnhancedPrediction(90),
+      hour: generatePrediction(1/24),
+      day: generatePrediction(1),
+      week: generatePrediction(7),
+      twoWeeks: generatePrediction(14),
+      month: generatePrediction(30),
+      threeMonths: generatePrediction(90),
     };
 
     const technicalAnalysis = {
       rsi: calculateRSI(prices),
-      bollingerBands: calculateBollingerBands(prices),
+      volatility: calculateVolatility(prices),
       ma7: prices.slice(-7).reduce((a, b) => a + b, 0) / 7,
       ma14: prices.slice(-14).reduce((a, b) => a + b, 0) / 14,
       ma30: prices.slice(-30).reduce((a, b) => a + b, 0) / 30,
@@ -268,7 +214,7 @@ serve(async (req) => {
       lastUpdated: new Date().toISOString()
     };
 
-    console.log('Successfully generated enhanced predictions with high confidence');
+    console.log('Successfully generated enhanced predictions');
 
     return new Response(
       JSON.stringify(responseData),

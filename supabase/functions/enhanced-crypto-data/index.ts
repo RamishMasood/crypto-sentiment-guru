@@ -131,6 +131,7 @@ serve(async (req) => {
       volumeTrend: volumes.slice(-7).reduce((a, b) => a + b, 0) / 7 > 
                   volumes.slice(-30, -7).reduce((a, b) => a + b, 0) / 23 
                   ? "increasing" : "decreasing",
+      marketSentiment: orderBookRatio > 1.1 ? "bullish" : orderBookRatio < 0.9 ? "bearish" : "neutral",
       priceChange: ((priceResponse.USD - dailyPrices[0]) / dailyPrices[0]) * 100
     };
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, LineChart, BrainCog } from "lucide-react";
+import { TrendingUp, TrendingDown, LineChart, BrainCog, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ChartContainer,
@@ -32,6 +32,7 @@ interface CryptoData {
     confidence: number;
   };
   predictions: {
+    hour: { time: number; price: number; confidence: number };
     day: { time: number; price: number; confidence: number };
     week: { time: number; price: number; confidence: number };
     twoWeeks: { time: number; price: number; confidence: number };
@@ -55,13 +56,12 @@ export const CryptoStats = () => {
 
   const fetchCryptoData = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('crypto-data', {
+      const { data, error } = await supabase.functions.invoke('enhanced-crypto-data', {
         body: { symbol: 'BTC' }
       });
 
       if (error) throw error;
 
-      // Validate the required data structure
       if (!data || 
           typeof data.currentPrice !== 'number' || 
           !data.prediction || 
@@ -109,10 +109,10 @@ export const CryptoStats = () => {
   }
 
   const priceChange = btcData.technicalAnalysis.priceChange;
-  const chartData = btcData.hourlyHistory ? btcData.hourlyHistory.map((item) => ({
+  const chartData = btcData.hourlyHistory.map((item) => ({
     date: new Date(item.time * 1000).toLocaleDateString(),
     price: item.close,
-  })) : [];
+  }));
 
   const chartConfig = {
     price: {
@@ -146,88 +146,83 @@ export const CryptoStats = () => {
                 </p>
               </div>
               <div className="h-16 w-24">
-                {chartData.length > 0 && (
-                  <ChartContainer config={chartConfig}>
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <Area
-                        type="monotone"
-                        dataKey="price"
-                        stroke="hsl(var(--primary))"
-                        fill="url(#gradient)"
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ChartContainer>
-                )}
+                <ChartContainer config={chartConfig}>
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="price"
+                      stroke="hsl(var(--primary))"
+                      fill="url(#gradient)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ChartContainer>
               </div>
             </div>
           </Card>
 
-          {btcData.prediction && (
-            <>
-              <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Market Sentiment</p>
-                    <h3 className="text-2xl font-bold mt-1">
-                      {btcData.prediction.trend === 'up' ? "Bullish" : "Bearish"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground flex items-center mt-1">
-                      {(btcData.prediction.confidence * 100).toFixed(0)}% confidence
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Volume: {btcData.technicalAnalysis.volumeTrend}
-                    </p>
-                  </div>
-                  <BrainCog className="h-8 w-8 text-muted-foreground" />
-                </div>
-              </Card>
+          <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Next Hour Prediction</p>
+                <h3 className="text-2xl font-bold mt-1">
+                  ${btcData.predictions.hour.price.toLocaleString()}
+                </h3>
+                <p className="text-sm text-muted-foreground flex items-center mt-1">
+                  <Clock className="h-4 w-4 mr-1" />
+                  {(btcData.predictions.hour.confidence * 100).toFixed(0)}% confidence
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Trend: {btcData.technicalAnalysis.volumeTrend}
+                </p>
+              </div>
+              <BrainCog className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </Card>
 
-              <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
-                <div className="flex items-center justify-between">
+          <Card className="p-6 bg-card/50 backdrop-blur-sm border-muted">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Future Predictions</p>
+                <div className="space-y-2 mt-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">Price Predictions</p>
-                    <div className="space-y-2 mt-2">
-                      <div>
-                        <p className="text-xs text-muted-foreground">24h</p>
-                        <p className="text-sm font-medium">
-                          ${btcData.predictions.day.price.toLocaleString()} 
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({(btcData.predictions.day.confidence * 100).toFixed(0)}%)
-                          </span>
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">7d</p>
-                        <p className="text-sm font-medium">
-                          ${btcData.predictions.week.price.toLocaleString()}
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({(btcData.predictions.week.confidence * 100).toFixed(0)}%)
-                          </span>
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">30d</p>
-                        <p className="text-sm font-medium">
-                          ${btcData.predictions.month.price.toLocaleString()}
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({(btcData.predictions.month.confidence * 100).toFixed(0)}%)
-                          </span>
-                        </p>
-                      </div>
-                    </div>
+                    <p className="text-xs text-muted-foreground">24h</p>
+                    <p className="text-sm font-medium">
+                      ${btcData.predictions.day.price.toLocaleString()} 
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({(btcData.predictions.day.confidence * 100).toFixed(0)}%)
+                      </span>
+                    </p>
                   </div>
-                  <LineChart className="h-8 w-8 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">7d</p>
+                    <p className="text-sm font-medium">
+                      ${btcData.predictions.week.price.toLocaleString()}
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({(btcData.predictions.week.confidence * 100).toFixed(0)}%)
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">30d</p>
+                    <p className="text-sm font-medium">
+                      ${btcData.predictions.month.price.toLocaleString()}
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({(btcData.predictions.month.confidence * 100).toFixed(0)}%)
+                      </span>
+                    </p>
+                  </div>
                 </div>
-              </Card>
-            </>
-          )}
+              </div>
+              <LineChart className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </Card>
         </div>
       </div>
     </section>

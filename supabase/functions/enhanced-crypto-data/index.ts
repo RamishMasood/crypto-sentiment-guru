@@ -20,7 +20,7 @@ serve(async (req) => {
     const [priceData, historicalDaily, historicalHourly, orderBookData, socialStats] = await Promise.all([
       fetch(`https://min-api.cryptocompare.com/data/price?fsym=${symbol}&tsyms=USD&api_key=${cryptoCompareApiKey}`),
       fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${symbol}&tsym=USD&limit=30&api_key=${cryptoCompareApiKey}`),
-      fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${symbol}&tsym=USD&limit=168&api_key=${cryptoCompareApiKey}`), // 7 days of hourly data
+      fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${symbol}&tsym=USD&limit=168&api_key=${cryptoCompareApiKey}`),
       fetch(`https://min-api.cryptocompare.com/data/v2/ob/l2/snapshot?fsym=${symbol}&tsym=USD&api_key=${cryptoCompareApiKey}`),
       fetch(`https://min-api.cryptocompare.com/data/social/coin/latest?coinId=${symbol}&api_key=${cryptoCompareApiKey}`)
     ]);
@@ -76,14 +76,14 @@ serve(async (req) => {
       return ema;
     };
 
-    // Enhanced market depth analysis
+    // Enhanced market depth analysis with weighted factors
     const orderBookBids = orderBookResponse.Data?.bids || [];
     const orderBookAsks = orderBookResponse.Data?.asks || [];
     const buyPressure = orderBookBids.reduce((sum: number, [price, quantity]: number[]) => sum + price * quantity, 0);
     const sellPressure = orderBookAsks.reduce((sum: number, [price, quantity]: number[]) => sum + price * quantity, 0);
     const orderBookRatio = buyPressure / (sellPressure || 1);
 
-    // Enhanced social metrics analysis
+    // Enhanced social metrics analysis with weighted impact
     const socialMetrics = socialStatsResponse.Data || {};
     const redditActiveUsers = socialMetrics.Reddit?.active_users || 0;
     const twitterFollowers = socialMetrics.Twitter?.followers || 0;
@@ -97,54 +97,62 @@ serve(async (req) => {
       (twitterPosts * 0.2)
     ) / 1000;
 
-    // Enhanced prediction model
+    // Enhanced prediction model with improved confidence calculation
     const generatePrediction = (timeframe: number) => {
       const currentPrice = priceResponse.USD;
       const rsi = calculateRSI(dailyPrices);
       const volatility = calculateVolatility(dailyPrices);
       const macd = calculateMACD(dailyPrices);
       
-      // Technical factors with weighted importance
-      const rsiSignal = rsi > 70 ? -0.2 : rsi < 30 ? 0.2 : 0;
-      const macdSignal = macd > 0 ? 0.15 : -0.15;
-      const volatilityImpact = 1 - (volatility / 200);
+      // Technical factors with optimized weights
+      const rsiSignal = rsi > 70 ? -0.3 : rsi < 30 ? 0.3 : 0;
+      const macdSignal = macd > 0 ? 0.25 : -0.25;
+      const volatilityImpact = 1 - (volatility / 150); // Adjusted scale
       
-      // Market depth analysis
-      const orderBookSignal = orderBookRatio > 1.1 ? 0.2 : orderBookRatio < 0.9 ? -0.2 : 0;
+      // Enhanced market depth analysis
+      const orderBookSignal = orderBookRatio > 1.2 ? 0.3 : orderBookRatio < 0.8 ? -0.3 : 0;
       
-      // Volume analysis
+      // Volume trend analysis
       const recentVolume = volumes.slice(-7).reduce((a, b) => a + b, 0) / 7;
       const historicalVolume = volumes.slice(-30, -7).reduce((a, b) => a + b, 0) / 23;
-      const volumeSignal = (recentVolume > historicalVolume) ? 0.15 : -0.15;
+      const volumeSignal = (recentVolume > historicalVolume * 1.2) ? 0.2 : -0.2;
       
-      // Price momentum
+      // Price momentum with increased weight
       const priceChange = ((currentPrice - dailyPrices[0]) / dailyPrices[0]);
-      const momentumSignal = priceChange > 0 ? 0.1 : -0.1;
+      const momentumSignal = priceChange > 0 ? 0.15 : -0.15;
 
-      // Combined technical score
+      // Combined technical score with optimized weights
       const technicalScore = (
-        (rsiSignal * 0.3) +
-        (macdSignal * 0.2) +
+        (rsiSignal * 0.35) +
+        (macdSignal * 0.25) +
         (orderBookSignal * 0.2) +
-        (volumeSignal * 0.15) +
-        (momentumSignal * 0.15)
+        (volumeSignal * 0.1) +
+        (momentumSignal * 0.1)
       ) * volatilityImpact;
 
-      // Social sentiment impact
-      const socialImpact = (socialScore > 500 ? 0.15 : socialScore > 100 ? 0.1 : -0.1);
+      // Enhanced social sentiment impact
+      const socialImpact = (socialScore > 750 ? 0.2 : socialScore > 250 ? 0.1 : -0.1);
 
-      // Calculate trend and confidence
-      const trend = 1 + (technicalScore + socialImpact);
+      // Calculate trend with improved weighting
+      const trend = 1 + (technicalScore * 0.7 + socialImpact * 0.3);
       
-      // Enhanced confidence calculation
-      const technicalConfidence = Math.min(0.95, Math.abs(technicalScore) * 0.6);
-      const marketDepthConfidence = (orderBookRatio > 0.9 && orderBookRatio < 1.1) ? 0.2 : 0.1;
-      const socialConfidence = (socialScore > 100) ? 0.2 : 0.1;
+      // Enhanced confidence calculation with multiple factors
+      const technicalConfidence = Math.min(0.95, Math.abs(technicalScore) * 0.7);
+      const marketDepthConfidence = (orderBookRatio > 0.8 && orderBookRatio < 1.2) ? 0.15 : 0.1;
+      const socialConfidence = (socialScore > 250) ? 0.15 : 0.1;
       
-      const baseConfidence = technicalConfidence + marketDepthConfidence + socialConfidence;
-      const timeAdjustedConfidence = baseConfidence * Math.exp(-timeframe / 365); // Confidence decreases with time
+      // Base confidence with improved weighting
+      const baseConfidence = (
+        technicalConfidence * 0.6 +
+        marketDepthConfidence * 0.25 +
+        socialConfidence * 0.15
+      );
       
-      const confidence = Math.min(0.95, timeAdjustedConfidence);
+      // Time-adjusted confidence with slower decay
+      const timeAdjustedConfidence = baseConfidence * Math.exp(-timeframe / 500);
+      
+      // Final confidence score with minimum threshold
+      const confidence = Math.max(0.65, Math.min(0.95, timeAdjustedConfidence));
 
       const date = new Date();
       date.setDate(date.getDate() + timeframe);
@@ -152,13 +160,13 @@ serve(async (req) => {
       return {
         time: Math.floor(date.getTime() / 1000),
         price: currentPrice * Math.pow(trend, timeframe/7),
-        confidence: confidence
+        confidence
       };
     };
 
-    // Generate predictions for different timeframes
+    // Generate predictions for different timeframes including hourly
     const predictions = {
-      hour: generatePrediction(1/24), // 1 hour prediction
+      hour: generatePrediction(1/24),
       day: generatePrediction(1),
       week: generatePrediction(7),
       twoWeeks: generatePrediction(14),

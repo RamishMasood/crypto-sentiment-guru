@@ -45,23 +45,31 @@ interface PredictionChartProps {
 export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
   if (!data) return null;
 
-  // Combine historical and prediction data
+  const formatNumber = (value: number | undefined): number => {
+    return typeof value === 'number' ? value : 0;
+  };
+
+  // Combine historical and prediction data with safe number formatting
   const chartData = [
     ...(data.history || []).map((item) => ({
-      date: new Date(item.time * 1000),
-      price: item.close,
+      date: new Date(formatNumber(item.time) * 1000),
+      price: formatNumber(item.close),
       type: 'historical'
     })),
     ...Object.entries(data.predictions || {}).map(([timeframe, prediction]) => ({
-      date: new Date(prediction.time * 1000),
-      price: prediction.price,
-      confidence: prediction.confidence,
+      date: new Date(formatNumber(prediction.time) * 1000),
+      price: formatNumber(prediction.price),
+      confidence: formatNumber(prediction.confidence),
       type: 'prediction',
       timeframe
     }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const technicalData = data.technicalAnalysis;
+  const technicalData = data.technicalAnalysis || {
+    rsi: 0,
+    volatility: 0,
+    marketSentiment: 'unknown'
+  };
 
   return (
     <Card className="p-6">
@@ -70,8 +78,8 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
           {symbol} Price Prediction
         </h2>
         <div className="text-sm text-muted-foreground">
-          <div>RSI: {technicalData.rsi.toFixed(2)}</div>
-          <div>Volatility: {technicalData.volatility.toFixed(2)}%</div>
+          <div>RSI: {formatNumber(technicalData.rsi).toFixed(2)}</div>
+          <div>Volatility: {formatNumber(technicalData.volatility).toFixed(2)}%</div>
           <div>Sentiment: {technicalData.marketSentiment}</div>
         </div>
       </div>
@@ -112,7 +120,7 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
                           {format(new Date(data.date), 'MMM dd, yyyy')}
                         </span>
                         <span className="font-bold text-foreground">
-                          ${data.price.toLocaleString()}
+                          ${formatNumber(data.price).toLocaleString()}
                         </span>
                         {data.type === 'prediction' && (
                           <>
@@ -120,7 +128,7 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
                               {data.timeframe} prediction
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              Confidence: {(data.confidence * 100).toFixed(0)}%
+                              Confidence: {(formatNumber(data.confidence) * 100).toFixed(0)}%
                             </span>
                           </>
                         )}
@@ -144,16 +152,16 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-        {Object.entries(data.predictions).map(([timeframe, prediction]) => (
+        {Object.entries(data.predictions || {}).map(([timeframe, prediction]) => (
           <div key={timeframe} className="p-3 rounded-lg bg-card/50">
             <div className="text-sm font-medium mb-1">
               {timeframe.charAt(0).toUpperCase() + timeframe.slice(1)} Prediction
             </div>
             <div className="text-lg font-bold">
-              ${prediction.price.toLocaleString()}
+              ${formatNumber(prediction.price).toLocaleString()}
             </div>
             <div className="text-xs text-muted-foreground">
-              Confidence: {(prediction.confidence * 100).toFixed(0)}%
+              Confidence: {(formatNumber(prediction.confidence) * 100).toFixed(0)}%
             </div>
           </div>
         ))}

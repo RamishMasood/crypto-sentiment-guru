@@ -164,7 +164,7 @@ serve(async (req) => {
       };
     };
 
-    // Generate predictions for different timeframes including hourly
+    // Generate predictions for different timeframes including hourly and yearly
     const predictions = {
       hour: generatePrediction(1/24),
       day: generatePrediction(1),
@@ -194,13 +194,7 @@ serve(async (req) => {
 
     const responseData = {
       currentPrice: priceResponse.USD,
-      dailyHistory: historicalDailyResponse.Data.Data,
-      hourlyHistory: historicalHourlyResponse.Data.Data,
-      prediction: {
-        price: predictions.hour.price,
-        trend: technicalAnalysis.priceChange >= 0 ? 'up' : 'down',
-        confidence: predictions.hour.confidence
-      },
+      history: historicalDailyResponse.Data.Data,
       predictions,
       technicalAnalysis,
       lastUpdated: new Date().toISOString()

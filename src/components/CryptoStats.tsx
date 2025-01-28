@@ -126,7 +126,18 @@ export const CryptoStats = () => {
   };
 
   const formatConfidence = (confidence: number | undefined) => {
-    return confidence !== undefined ? (confidence * 100).toFixed(0) : '0';
+    if (typeof confidence !== 'number') return '0';
+    return (confidence * 100).toFixed(0);
+  };
+
+  const formatPrice = (price: number | undefined) => {
+    if (typeof price !== 'number') return '0';
+    return price.toLocaleString();
+  };
+
+  const formatRSI = (rsi: number | undefined) => {
+    if (typeof rsi !== 'number') return 'N/A';
+    return rsi.toFixed(2);
   };
 
   return (
@@ -138,7 +149,7 @@ export const CryptoStats = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Bitcoin Price</p>
                 <h3 className="text-2xl font-bold mt-1">
-                  ${btcData.currentPrice?.toLocaleString() ?? '0'}
+                  ${formatPrice(btcData.currentPrice)}
                 </h3>
                 <p className={`text-sm flex items-center mt-1 ${
                   priceChange >= 0 ? "text-emerald-500" : "text-red-500"
@@ -178,7 +189,7 @@ export const CryptoStats = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Next Hour Prediction</p>
                 <h3 className="text-2xl font-bold mt-1">
-                  ${btcData.predictions?.hour?.price?.toLocaleString() ?? '0'}
+                  ${formatPrice(btcData.predictions?.hour?.price)}
                 </h3>
                 <p className="text-sm text-muted-foreground flex items-center mt-1">
                   <Clock className="h-4 w-4 mr-1" />
@@ -188,7 +199,7 @@ export const CryptoStats = () => {
                   Market Sentiment: {btcData.technicalAnalysis?.marketSentiment ?? 'Unknown'}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  RSI: {btcData.technicalAnalysis?.rsi?.toFixed(2) ?? 'N/A'}
+                  RSI: {formatRSI(btcData.technicalAnalysis?.rsi)}
                 </p>
               </div>
               <BrainCog className="h-8 w-8 text-muted-foreground" />
@@ -203,7 +214,7 @@ export const CryptoStats = () => {
                   <div>
                     <p className="text-xs text-muted-foreground">24h</p>
                     <p className="text-sm font-medium">
-                      ${btcData.predictions?.day?.price?.toLocaleString() ?? '0'} 
+                      ${formatPrice(btcData.predictions?.day?.price)}
                       <span className="text-xs text-muted-foreground ml-1">
                         ({formatConfidence(btcData.predictions?.day?.confidence)}%)
                       </span>
@@ -212,7 +223,7 @@ export const CryptoStats = () => {
                   <div>
                     <p className="text-xs text-muted-foreground">7d</p>
                     <p className="text-sm font-medium">
-                      ${btcData.predictions?.week?.price?.toLocaleString() ?? '0'}
+                      ${formatPrice(btcData.predictions?.week?.price)}
                       <span className="text-xs text-muted-foreground ml-1">
                         ({formatConfidence(btcData.predictions?.week?.confidence)}%)
                       </span>
@@ -221,7 +232,7 @@ export const CryptoStats = () => {
                   <div>
                     <p className="text-xs text-muted-foreground">30d</p>
                     <p className="text-sm font-medium">
-                      ${btcData.predictions?.month?.price?.toLocaleString() ?? '0'}
+                      ${formatPrice(btcData.predictions?.month?.price)}
                       <span className="text-xs text-muted-foreground ml-1">
                         ({formatConfidence(btcData.predictions?.month?.confidence)}%)
                       </span>

@@ -38,9 +38,7 @@ export default function Index() {
           </div>
         </section>
 
-        <div className="container mx-auto">
-          <CryptoStats />
-        </div>
+        <CryptoStats />
         <Features />
       </main>
 

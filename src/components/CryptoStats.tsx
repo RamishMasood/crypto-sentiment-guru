@@ -46,8 +46,6 @@ interface CryptoData {
     ma30: number;
     volumeTrend: string;
     priceChange: number;
-    marketSentiment: string;
-    rsi: number;
   };
 }
 
@@ -110,10 +108,10 @@ export const CryptoStats = () => {
     );
   }
 
-  const priceChange = btcData.technicalAnalysis?.priceChange ?? 0;
-  const chartData = (btcData.hourlyHistory || []).map((item) => ({
+  const priceChange = btcData.technicalAnalysis.priceChange;
+  const chartData = btcData.hourlyHistory.map((item) => ({
     date: new Date(item.time * 1000).toLocaleDateString(),
-    price: item.close || 0,
+    price: item.close,
   }));
 
   const chartConfig = {
@@ -125,21 +123,6 @@ export const CryptoStats = () => {
     },
   };
 
-  const formatConfidence = (confidence: number | undefined) => {
-    if (typeof confidence !== 'number') return '0';
-    return (confidence * 100).toFixed(0);
-  };
-
-  const formatPrice = (price: number | undefined) => {
-    if (typeof price !== 'number') return '0';
-    return price.toLocaleString();
-  };
-
-  const formatRSI = (rsi: number | undefined) => {
-    if (typeof rsi !== 'number') return 'N/A';
-    return rsi.toFixed(2);
-  };
-
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-7xl mx-auto">
@@ -149,7 +132,7 @@ export const CryptoStats = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Bitcoin Price</p>
                 <h3 className="text-2xl font-bold mt-1">
-                  ${formatPrice(btcData.currentPrice)}
+                  ${btcData.currentPrice.toLocaleString()}
                 </h3>
                 <p className={`text-sm flex items-center mt-1 ${
                   priceChange >= 0 ? "text-emerald-500" : "text-red-500"
@@ -164,23 +147,21 @@ export const CryptoStats = () => {
               </div>
               <div className="h-16 w-24">
                 <ChartContainer config={chartConfig}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <Area
-                        type="monotone"
-                        dataKey="price"
-                        stroke="hsl(var(--primary))"
-                        fill="url(#gradient)"
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="price"
+                      stroke="hsl(var(--primary))"
+                      fill="url(#gradient)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
                 </ChartContainer>
               </div>
             </div>
@@ -191,17 +172,14 @@ export const CryptoStats = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Next Hour Prediction</p>
                 <h3 className="text-2xl font-bold mt-1">
-                  ${formatPrice(btcData.predictions?.hour?.price)}
+                  ${btcData.predictions.hour.price.toLocaleString()}
                 </h3>
                 <p className="text-sm text-muted-foreground flex items-center mt-1">
                   <Clock className="h-4 w-4 mr-1" />
-                  {formatConfidence(btcData.predictions?.hour?.confidence)}% confidence
+                  {(btcData.predictions.hour.confidence * 100).toFixed(0)}% confidence
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Market Sentiment: {btcData.technicalAnalysis?.marketSentiment ?? 'Unknown'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  RSI: {formatRSI(btcData.technicalAnalysis?.rsi)}
+                  Trend: {btcData.technicalAnalysis.volumeTrend}
                 </p>
               </div>
               <BrainCog className="h-8 w-8 text-muted-foreground" />
@@ -216,27 +194,27 @@ export const CryptoStats = () => {
                   <div>
                     <p className="text-xs text-muted-foreground">24h</p>
                     <p className="text-sm font-medium">
-                      ${formatPrice(btcData.predictions?.day?.price)}
+                      ${btcData.predictions.day.price.toLocaleString()} 
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({formatConfidence(btcData.predictions?.day?.confidence)}%)
+                        ({(btcData.predictions.day.confidence * 100).toFixed(0)}%)
                       </span>
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">7d</p>
                     <p className="text-sm font-medium">
-                      ${formatPrice(btcData.predictions?.week?.price)}
+                      ${btcData.predictions.week.price.toLocaleString()}
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({formatConfidence(btcData.predictions?.week?.confidence)}%)
+                        ({(btcData.predictions.week.confidence * 100).toFixed(0)}%)
                       </span>
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">30d</p>
                     <p className="text-sm font-medium">
-                      ${formatPrice(btcData.predictions?.month?.price)}
+                      ${btcData.predictions.month.price.toLocaleString()}
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({formatConfidence(btcData.predictions?.month?.confidence)}%)
+                        ({(btcData.predictions.month.confidence * 100).toFixed(0)}%)
                       </span>
                     </p>
                   </div>

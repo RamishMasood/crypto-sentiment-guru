@@ -22,9 +22,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleAuthError = async (error: any) => {
     console.error("Auth error:", error);
-    if (error.message?.includes("refresh_token") || 
-        error.message?.includes("token_not_found") || 
-        error.message?.includes("Invalid Refresh Token")) {
+    // If there's a refresh token error, sign out the user
+    if (error.message?.includes("refresh_token") || error.message?.includes("token_not_found")) {
       await supabase.auth.signOut();
       setUser(null);
       navigate("/auth");
@@ -37,52 +36,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          handleAuthError(sessionError);
-          return;
-        }
-
-        if (session?.user) {
-          setUser(session.user);
-        } else {
-          if (location.pathname.startsWith('/dashboard')) {
-            navigate("/auth");
-          }
-        }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
         handleAuthError(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
-      
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        if (location.pathname.startsWith('/dashboard')) {
-          navigate("/auth");
-        }
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setUser(session?.user ?? null);
+        return;
       }
       
+      setUser(session?.user ?? null);
+      setLoading(false);
+      
+      // Only redirect to auth if trying to access protected routes without authentication
       if (!session?.user && location.pathname.startsWith('/dashboard')) {
         navigate("/auth");
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        // Clear any local storage or state if needed
+        setUser(null);
+        if (location.pathname.startsWith('/dashboard')) {
+          navigate("/auth");
+        }
+      }
+      
+      // Only redirect to auth if trying to access protected routes without authentication
+      if (!session?.user && location.pathname.startsWith('/dashboard')) {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate, location]);
 
   return (

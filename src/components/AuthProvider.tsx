@@ -22,7 +22,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleAuthError = async (error: any) => {
     console.error("Auth error:", error);
-    if (error.message?.includes("refresh_token") || error.message?.includes("token_not_found")) {
+    if (error.message?.includes("refresh_token") || 
+        error.message?.includes("token_not_found") || 
+        error.message?.includes("Invalid Refresh Token")) {
       await supabase.auth.signOut();
       setUser(null);
       navigate("/auth");
@@ -44,10 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        setUser(session?.user ?? null);
-        
-        if (!session?.user && location.pathname.startsWith('/dashboard')) {
-          navigate("/auth");
+        if (session?.user) {
+          setUser(session.user);
+        } else {
+          if (location.pathname.startsWith('/dashboard')) {
+            navigate("/auth");
+          }
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
@@ -61,13 +65,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
-      setUser(session?.user ?? null);
       
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
         setUser(null);
         if (location.pathname.startsWith('/dashboard')) {
           navigate("/auth");
         }
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setUser(session?.user ?? null);
       }
       
       if (!session?.user && location.pathname.startsWith('/dashboard')) {

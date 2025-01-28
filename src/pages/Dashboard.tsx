@@ -17,6 +17,12 @@ interface WatchlistItem {
   cryptocurrency: string;
 }
 
+interface PredictionData {
+  time: number;
+  price: number;
+  confidence: number;
+}
+
 interface CryptoData {
   currentPrice: number;
   history: Array<{
@@ -24,14 +30,14 @@ interface CryptoData {
     close: number;
   }>;
   predictions: {
-    hour: { time: number; price: number; confidence: number };
-    day: { time: number; price: number; confidence: number };
-    week: { time: number; price: number; confidence: number };
-    twoWeeks: { time: number; price: number; confidence: number };
-    month: { time: number; price: number; confidence: number };
-    threeMonths: { time: number; price: number; confidence: number };
-    sixMonths: { time: number; price: number; confidence: number };
-    year: { time: number; price: number; confidence: number };
+    hour: PredictionData;
+    day: PredictionData;
+    week: PredictionData;
+    twoWeeks: PredictionData;
+    month: PredictionData;
+    threeMonths: PredictionData;
+    sixMonths: PredictionData;
+    year: PredictionData;
   };
   technicalAnalysis: {
     ma7: number;
@@ -89,11 +95,14 @@ export default function Dashboard() {
 
   const fetchCryptoData = async (symbol: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('crypto-data', {
+      const { data, error } = await supabase.functions.invoke('enhanced-crypto-data', {
         body: { symbol }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching crypto data:", error);
+        throw error;
+      }
       
       // Validate the data structure
       if (!data || typeof data.currentPrice !== 'number' || !data.predictions) {
@@ -101,7 +110,7 @@ export default function Dashboard() {
         throw new Error('Invalid data structure received from API');
       }
 
-      setCryptoData(data);
+      setCryptoData(data as CryptoData);
     } catch (error) {
       console.error("Error fetching crypto data:", error);
       toast({

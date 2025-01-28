@@ -16,7 +16,6 @@ serve(async (req) => {
 
     console.log('Starting enhanced prediction analysis for:', symbol);
 
-    // Fetch comprehensive market data
     const [priceData, historicalDaily, historicalHourly, orderBookData, socialStats] = await Promise.all([
       fetch(`https://min-api.cryptocompare.com/data/price?fsym=${symbol}&tsyms=USD&api_key=${cryptoCompareApiKey}`),
       fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${symbol}&tsym=USD&limit=365&api_key=${cryptoCompareApiKey}`),
@@ -164,7 +163,7 @@ serve(async (req) => {
       };
     };
 
-    // Generate predictions for different timeframes including hourly and yearly
+    // Generate predictions for all timeframes
     const predictions = {
       hour: generatePrediction(1/24),
       day: generatePrediction(1),
@@ -200,7 +199,7 @@ serve(async (req) => {
       lastUpdated: new Date().toISOString()
     };
 
-    console.log('Successfully generated enhanced predictions with confidence:', predictions.hour.confidence);
+    console.log('Successfully generated enhanced predictions');
 
     return new Response(
       JSON.stringify(responseData),

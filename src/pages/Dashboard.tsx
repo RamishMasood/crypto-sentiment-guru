@@ -24,12 +24,14 @@ interface CryptoData {
     close: number;
   }>;
   predictions: {
+    hour: { time: number; price: number; confidence: number };
     day: { time: number; price: number; confidence: number };
     week: { time: number; price: number; confidence: number };
     twoWeeks: { time: number; price: number; confidence: number };
     month: { time: number; price: number; confidence: number };
     threeMonths: { time: number; price: number; confidence: number };
     sixMonths: { time: number; price: number; confidence: number };
+    year: { time: number; price: number; confidence: number };
   };
   technicalAnalysis: {
     ma7: number;

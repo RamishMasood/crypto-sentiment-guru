@@ -108,11 +108,11 @@ export const CryptoStats = () => {
     );
   }
 
-  const priceChange = btcData.technicalAnalysis.priceChange;
-  const chartData = btcData.hourlyHistory.map((item) => ({
+  const priceChange = btcData.technicalAnalysis?.priceChange ?? 0;
+  const chartData = btcData.hourlyHistory?.map((item) => ({
     date: new Date(item.time * 1000).toLocaleDateString(),
     price: item.close,
-  }));
+  })) ?? [];
 
   const chartConfig = {
     price: {
@@ -121,6 +121,10 @@ export const CryptoStats = () => {
         dark: "hsl(var(--primary))",
       },
     },
+  };
+
+  const formatConfidence = (confidence: number | undefined) => {
+    return confidence !== undefined ? (confidence * 100).toFixed(0) : '0';
   };
 
   return (
@@ -132,7 +136,7 @@ export const CryptoStats = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Bitcoin Price</p>
                 <h3 className="text-2xl font-bold mt-1">
-                  ${btcData.currentPrice.toLocaleString()}
+                  ${btcData.currentPrice?.toLocaleString() ?? '0'}
                 </h3>
                 <p className={`text-sm flex items-center mt-1 ${
                   priceChange >= 0 ? "text-emerald-500" : "text-red-500"
@@ -172,14 +176,14 @@ export const CryptoStats = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Next Hour Prediction</p>
                 <h3 className="text-2xl font-bold mt-1">
-                  ${btcData.predictions.hour.price.toLocaleString()}
+                  ${btcData.predictions?.hour?.price?.toLocaleString() ?? '0'}
                 </h3>
                 <p className="text-sm text-muted-foreground flex items-center mt-1">
                   <Clock className="h-4 w-4 mr-1" />
-                  {(btcData.predictions.hour.confidence * 100).toFixed(0)}% confidence
+                  {formatConfidence(btcData.predictions?.hour?.confidence)}% confidence
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Trend: {btcData.technicalAnalysis.volumeTrend}
+                  Trend: {btcData.technicalAnalysis?.volumeTrend ?? 'Unknown'}
                 </p>
               </div>
               <BrainCog className="h-8 w-8 text-muted-foreground" />
@@ -194,27 +198,27 @@ export const CryptoStats = () => {
                   <div>
                     <p className="text-xs text-muted-foreground">24h</p>
                     <p className="text-sm font-medium">
-                      ${btcData.predictions.day.price.toLocaleString()} 
+                      ${btcData.predictions?.day?.price?.toLocaleString() ?? '0'} 
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({(btcData.predictions.day.confidence * 100).toFixed(0)}%)
+                        ({formatConfidence(btcData.predictions?.day?.confidence)}%)
                       </span>
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">7d</p>
                     <p className="text-sm font-medium">
-                      ${btcData.predictions.week.price.toLocaleString()}
+                      ${btcData.predictions?.week?.price?.toLocaleString() ?? '0'}
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({(btcData.predictions.week.confidence * 100).toFixed(0)}%)
+                        ({formatConfidence(btcData.predictions?.week?.confidence)}%)
                       </span>
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">30d</p>
                     <p className="text-sm font-medium">
-                      ${btcData.predictions.month.price.toLocaleString()}
+                      ${btcData.predictions?.month?.price?.toLocaleString() ?? '0'}
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({(btcData.predictions.month.confidence * 100).toFixed(0)}%)
+                        ({formatConfidence(btcData.predictions?.month?.confidence)}%)
                       </span>
                     </p>
                   </div>

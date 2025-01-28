@@ -111,10 +111,10 @@ export const CryptoStats = () => {
   }
 
   const priceChange = btcData.technicalAnalysis?.priceChange ?? 0;
-  const chartData = btcData.hourlyHistory?.map((item) => ({
+  const chartData = (btcData.hourlyHistory || []).map((item) => ({
     date: new Date(item.time * 1000).toLocaleDateString(),
-    price: item.close,
-  })) ?? [];
+    price: item.close || 0,
+  }));
 
   const chartConfig = {
     price: {
@@ -164,21 +164,23 @@ export const CryptoStats = () => {
               </div>
               <div className="h-16 w-24">
                 <ChartContainer config={chartConfig}>
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area
-                      type="monotone"
-                      dataKey="price"
-                      stroke="hsl(var(--primary))"
-                      fill="url(#gradient)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <Area
+                        type="monotone"
+                        dataKey="price"
+                        stroke="hsl(var(--primary))"
+                        fill="url(#gradient)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </ChartContainer>
               </div>
             </div>

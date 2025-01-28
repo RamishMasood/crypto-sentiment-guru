@@ -18,12 +18,14 @@ interface PredictionChartProps {
       close: number;
     }>;
     predictions: {
+      hour: { time: number; price: number; confidence: number };
       day: { time: number; price: number; confidence: number };
       week: { time: number; price: number; confidence: number };
       twoWeeks: { time: number; price: number; confidence: number };
       month: { time: number; price: number; confidence: number };
       threeMonths: { time: number; price: number; confidence: number };
       sixMonths: { time: number; price: number; confidence: number };
+      year: { time: number; price: number; confidence: number };
     };
     technicalAnalysis: {
       ma7: number;
@@ -50,11 +52,12 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
       price: item.close,
       type: 'historical'
     })),
-    ...Object.values(data.predictions || {}).map((prediction) => ({
+    ...Object.entries(data.predictions || {}).map(([timeframe, prediction]) => ({
       date: new Date(prediction.time * 1000),
       price: prediction.price,
       confidence: prediction.confidence,
-      type: 'prediction'
+      type: 'prediction',
+      timeframe
     }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
@@ -112,9 +115,14 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
                           ${data.price.toLocaleString()}
                         </span>
                         {data.type === 'prediction' && (
-                          <span className="text-xs text-muted-foreground">
-                            Confidence: {(data.confidence * 100).toFixed(0)}%
-                          </span>
+                          <>
+                            <span className="text-xs text-muted-foreground">
+                              {data.timeframe} prediction
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              Confidence: {(data.confidence * 100).toFixed(0)}%
+                            </span>
+                          </>
                         )}
                       </div>
                     </div>
@@ -129,13 +137,13 @@ export const PredictionChart = ({ data, symbol }: PredictionChartProps) => {
               stroke="hsl(var(--primary))"
               fill="url(#colorHistorical)"
               strokeWidth={2}
-              name="Historical Price"
+              name="Price"
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
         {Object.entries(data.predictions).map(([timeframe, prediction]) => (
           <div key={timeframe} className="p-3 rounded-lg bg-card/50">
             <div className="text-sm font-medium mb-1">

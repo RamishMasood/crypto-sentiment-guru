@@ -14,6 +14,12 @@ interface PortfolioItem {
   purchase_price: number;
   purchase_date: string;
   current_price?: number;
+  predictions?: {
+    hour: { price: number; confidence: number };
+    day: { price: number; confidence: number };
+    week: { price: number; confidence: number };
+    month: { price: number; confidence: number };
+  };
 }
 
 export const Portfolio = () => {
@@ -33,18 +39,24 @@ export const Portfolio = () => {
 
       if (error) throw error;
 
-      // Fetch current prices for all cryptocurrencies
+      // Fetch current prices and predictions for all cryptocurrencies
       const portfolioWithPrices = await Promise.all(
         (data || []).map(async (item) => {
-          const { data: priceData } = await supabase.functions.invoke(
-            "crypto-data",
+          const { data: cryptoData } = await supabase.functions.invoke(
+            "enhanced-crypto-data",
             {
               body: { symbol: item.cryptocurrency },
             }
           );
           return {
             ...item,
-            current_price: priceData?.currentPrice || 0,
+            current_price: cryptoData?.currentPrice || 0,
+            predictions: {
+              hour: cryptoData?.predictions.hour || { price: 0, confidence: 0 },
+              day: cryptoData?.predictions.day || { price: 0, confidence: 0 },
+              week: cryptoData?.predictions.week || { price: 0, confidence: 0 },
+              month: cryptoData?.predictions.month || { price: 0, confidence: 0 },
+            },
           };
         })
       );
@@ -136,11 +148,26 @@ export const Portfolio = () => {
   const profitLoss = totalValue - totalInvestment;
   const profitLossPercentage = (profitLoss / totalInvestment) * 100;
 
+  // Calculate predicted portfolio values
+  const calculatePredictedValue = (timeframe: 'hour' | 'day' | 'week' | 'month') => {
+    return portfolio.reduce((acc, item) => {
+      const predictedPrice = item.predictions?.[timeframe]?.price || 0;
+      return acc + (item.quantity * predictedPrice);
+    }, 0);
+  };
+
+  const predictedValues = {
+    hour: calculatePredictedValue('hour'),
+    day: calculatePredictedValue('day'),
+    week: calculatePredictedValue('week'),
+    month: calculatePredictedValue('month'),
+  };
+
   return (
     <Card className="p-6">
       <h2 className="text-xl font-semibold mb-4">Your Portfolio</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground">Total Value</p>
           <h3 className="text-2xl font-bold">${totalValue.toLocaleString()}</h3>
@@ -163,6 +190,25 @@ export const Portfolio = () => {
             {Math.abs(profitLossPercentage).toFixed(2)}%)
           </h3>
         </Card>
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground">1H Prediction</p>
+          <h3 className="text-2xl font-bold text-primary">
+            ${predictedValues.hour.toLocaleString()}
+          </h3>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {Object.entries(predictedValues).slice(1).map(([timeframe, value]) => (
+          <Card key={timeframe} className="p-4">
+            <p className="text-sm text-muted-foreground">
+              {timeframe.charAt(0).toUpperCase() + timeframe.slice(1)} Prediction
+            </p>
+            <h3 className="text-2xl font-bold text-primary">
+              ${value.toLocaleString()}
+            </h3>
+          </Card>
+        ))}
       </div>
 
       <form onSubmit={addToPortfolio} className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">

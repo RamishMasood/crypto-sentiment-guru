@@ -19,7 +19,7 @@ serve(async (req) => {
     // Fetch comprehensive market data
     const [priceData, historicalDaily, historicalHourly, orderBookData, socialStats] = await Promise.all([
       fetch(`https://min-api.cryptocompare.com/data/price?fsym=${symbol}&tsyms=USD&api_key=${cryptoCompareApiKey}`),
-      fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${symbol}&tsym=USD&limit=30&api_key=${cryptoCompareApiKey}`),
+      fetch(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${symbol}&tsym=USD&limit=365&api_key=${cryptoCompareApiKey}`),
       fetch(`https://min-api.cryptocompare.com/data/v2/histohour?fsym=${symbol}&tsym=USD&limit=168&api_key=${cryptoCompareApiKey}`),
       fetch(`https://min-api.cryptocompare.com/data/v2/ob/l2/snapshot?fsym=${symbol}&tsym=USD&api_key=${cryptoCompareApiKey}`),
       fetch(`https://min-api.cryptocompare.com/data/social/coin/latest?coinId=${symbol}&api_key=${cryptoCompareApiKey}`)
@@ -172,7 +172,8 @@ serve(async (req) => {
       twoWeeks: generatePrediction(14),
       month: generatePrediction(30),
       threeMonths: generatePrediction(90),
-      sixMonths: generatePrediction(180)
+      sixMonths: generatePrediction(180),
+      year: generatePrediction(365)
     };
 
     const technicalAnalysis = {

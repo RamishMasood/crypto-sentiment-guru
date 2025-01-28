@@ -46,6 +46,8 @@ interface CryptoData {
     ma30: number;
     volumeTrend: string;
     priceChange: number;
+    marketSentiment: string;
+    rsi: number;
   };
 }
 
@@ -183,7 +185,10 @@ export const CryptoStats = () => {
                   {formatConfidence(btcData.predictions?.hour?.confidence)}% confidence
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Trend: {btcData.technicalAnalysis?.volumeTrend ?? 'Unknown'}
+                  Market Sentiment: {btcData.technicalAnalysis?.marketSentiment ?? 'Unknown'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  RSI: {btcData.technicalAnalysis?.rsi?.toFixed(2) ?? 'N/A'}
                 </p>
               </div>
               <BrainCog className="h-8 w-8 text-muted-foreground" />
